@@ -1,137 +1,190 @@
-# Run: streamlit run app.py
 
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
-# -------- MODEL --------
+# ─────────────────────────────────────────────────────────────
+# LOGISTIC GROWTH MODEL (Simple & Realistic)
+# ─────────────────────────────────────────────────────────────
 def logistic_growth(t, P0, K, r):
+    """Logistic growth formula used in business forecasting.
+    - Starts fast when capacity is abundant
+    - Gradually slows as the workforce approaches maximum capacity (K)"""
     return K / (1 + ((K - P0) / P0) * np.exp(-r * t))
 
-# -------- PAGE CONFIG --------
-st.set_page_config(page_title="Hiring Dashboard", layout="wide")
+# ─────────────────────────────────────────────────────────────
+# PAGE CONFIGURATION
+# ─────────────────────────────────────────────────────────────
+st.set_page_config(
+    page_title="Hiring Growth Simulator",
+    page_icon="📊",
+    layout="wide"
+)
 
-st.title("📊 Hiring Dashboard")
-st.caption("Simulate how a company's workforce grows over time using a logistic model.")
+st.title("📊 Hiring Growth Simulator")
+st.markdown("""
+**A professional tool to forecast workforce expansion.**  
+This simulator uses a **logistic growth model** — the same approach many companies use to plan hiring while respecting real-world limits like budget, office space, and management bandwidth.
+""")
 
-# -------- SESSION STATE --------
-if "run_simulation" not in st.session_state:
-    st.session_state.run_simulation = False
+# ─────────────────────────────────────────────────────────────
+# SIDEBAR – INPUT PARAMETERS (Clean & Professional)
+# ─────────────────────────────────────────────────────────────
+with st.sidebar:
+    st.header("Simulation Parameters")
+    
+    P0 = st.number_input(
+        "Initial Employees",
+        min_value=1,
+        value=50,
+        help="Starting size of your workforce."
+    )
+    
+    K = st.number_input(
+        "Maximum Workforce Capacity",
+        min_value=10,
+        value=500,
+        help="Target headcount the company plans to support (budget, space, infrastructure)."
+    )
+    
+    r = st.number_input(
+        "Growth Rate (per month)",
+        min_value=0.01,
+        max_value=2.0,
+        value=0.30,
+        step=0.01,
+        help="How quickly hiring happens early on. Higher = faster initial ramp-up."
+    )
+    
+    time_period = st.number_input(
+        "Simulation Period (Months)",
+        min_value=1,
+        value=24,
+        help="How many months into the future you want to project."
+    )
+    
+    st.caption("Tip: Try different values to see how growth changes.")
 
-# -------- INPUTS --------
-col1, col2 = st.columns([1, 2])
+# ─────────────────────────────────────────────────────────────
+# MAIN AREA – RESULTS
+# ─────────────────────────────────────────────────────────────
+st.subheader("📈 Simulation Results")
 
-with col1:
-    st.subheader("Inputs")
+# Basic validation
+if K <= P0:
+    st.error("⚠️ Maximum Workforce Capacity must be greater than Initial Employees.")
+    st.stop()
 
-    P0 = st.number_input("Initial Employees", min_value=1, value=50)
-    K = st.number_input("Max Workforce (Capacity)", min_value=1, value=500)
-    r = st.number_input("Growth Rate", min_value=0.01, value=0.3)
-    time_period = st.number_input("Time (Months)", min_value=1, value=24)
+# Run simulation (automatically updates when you change inputs)
+t = np.linspace(0, time_period, 200)                    # 200 points for smooth curve
+employees = logistic_growth(t, P0, K, r)
 
-    if st.button("Simulate"):
-        st.session_state.run_simulation = True
+# Create clean DataFrame
+df = pd.DataFrame({
+    "Time (Months)": np.round(t, 1),
+    "Employees": np.round(employees).astype(int)
+})
 
-    st.markdown("---")
+final_emp = df["Employees"].iloc[-1]
+capacity_used = (final_emp / K) * 100
 
-    # -------- EXPLANATION --------
-    st.info(
-        "📘 Hiring starts fast, then slows as it approaches maximum capacity.\n\n"
-        "This model reflects real-world constraints like budget, space, and management limits."
+# ── KEY METRICS ──
+col1, col2, col3 = st.columns(3)
+col1.metric("Starting Headcount", f"{P0:,}")
+col2.metric("Projected Headcount", f"{final_emp:,}", 
+            delta=f"+{final_emp - P0:,} employees")
+col3.metric("Capacity Utilization", f"{capacity_used:.1f}%")
+
+# ── SIMPLE GROWTH INSIGHTS ──
+st.subheader("📌 Growth Phase Analysis")
+
+mid_index = len(df) // 2
+start_val = df["Employees"].iloc[0]
+mid_val   = df["Employees"].iloc[mid_index]
+end_val   = df["Employees"].iloc[-1]
+
+early_growth = mid_val - start_val
+late_growth  = end_val - mid_val
+
+if early_growth > late_growth * 1.5:
+    st.success("📈 **Hiring is still accelerating** — most of the growth is still ahead.")
+elif late_growth > early_growth * 1.5:
+    st.info("📉 **Hiring momentum is slowing** — capacity limits are beginning to take effect.")
+else:
+    st.info("⚖️ **Hiring is at its peak growth phase** — this is typically the fastest period of expansion.")
+
+# Gentle, professional notes
+if r > 0.8:
+    st.caption("Note: A very high growth rate is shown. In reality, operational limits (training, culture, budget) usually slow hiring before the model predicts.")
+elif r < 0.08:
+    st.caption("Note: Growth is gradual. Depending on your hiring strategy, reaching the target may take longer than shown.")
+
+if capacity_used > 85:
+    st.caption("The workforce is approaching its planned maximum capacity.")
+elif capacity_used < 40:
+    st.caption("There is still significant room for expansion.")
+
+# ── VISUAL DEMONSTRATION ──
+st.subheader("Growth Curve")
+fig, ax = plt.subplots(figsize=(10, 5))
+
+ax.plot(df["Time (Months)"], df["Employees"], 
+        color="#1f77b4", linewidth=3.5, label="Projected Employees")
+ax.fill_between(df["Time (Months)"], df["Employees"], 
+                color="#1f77b4", alpha=0.15)
+
+ax.axhline(y=K, color="#d62728", linestyle="--", linewidth=2, 
+           label=f"Maximum Capacity ({K} employees)")
+
+ax.set_title("Workforce Growth Over Time", fontsize=16, pad=20)
+ax.set_xlabel("Time (Months)", fontsize=12)
+ax.set_ylabel("Number of Employees", fontsize=12)
+ax.grid(True, alpha=0.3)
+ax.legend(fontsize=11)
+
+# Clean up plot
+for spine in ax.spines.values():
+    spine.set_visible(False)
+ax.tick_params(axis='both', length=0)
+
+st.pyplot(fig, use_container_width=True)
+plt.close(fig)
+
+# ── DATA TABLE & INSPECTOR ──
+st.subheader("📋 Detailed Data")
+
+with st.expander("View full simulation table", expanded=False):
+    st.dataframe(
+        df.style.format({"Employees": "{:,}"}),
+        use_container_width=True,
+        hide_index=True
     )
 
-# -------- OUTPUT --------
-with col2:
-    st.subheader("Analysis")
+# Interactive inspector
+st.markdown("**Inspect any month**")
+index = st.slider(
+    "Select month to inspect",
+    min_value=0,
+    max_value=len(df)-1,
+    value=0,
+    step=1
+)
 
-    if st.session_state.run_simulation:
+selected = df.iloc[index]
+st.markdown(f"""
+**Month {selected['Time (Months)']:.1f}**  
+**Employees:** {selected['Employees']:,}
+""")
 
-        if K <= P0:
-            st.error("Max Workforce must be greater than Initial Employees")
-            st.stop()
-
-        # -------- COMPUTE --------
-        t = np.linspace(0, time_period, 100)
-        employees = logistic_growth(t, P0, K, r)
-
-        df = pd.DataFrame({
-            "Time (Months)": np.round(t, 2),
-            "Employees": employees.astype(int)
-        })
-
-        final_emp = int(df["Employees"].iloc[-1])
-        capacity_used = (final_emp / K) * 100
-
-        # -------- METRICS --------
-        m1, m2, m3 = st.columns(3)
-        m1.metric("Start", P0)
-        m2.metric("End", final_emp)
-        m3.metric("Capacity Used", f"{capacity_used:.1f}%")
-
-        # -------- SMART INSIGHTS (IMPROVED) --------
-
-        mid_index = len(df) // 2
-
-        start_val = df["Employees"].iloc[0]
-        mid_val = df["Employees"].iloc[mid_index]
-        end_val = df["Employees"].iloc[-1]
-
-        early_growth = mid_val - start_val
-        late_growth = end_val - mid_val
-
-        # Detect phase of growth
-        if early_growth > late_growth * 1.5:
-            st.info("📈 Hiring is still accelerating. Most of the growth is ahead.")
-        elif late_growth > early_growth * 1.5:
-            st.info("📉 Hiring momentum is slowing down as capacity limits start to take effect.")
-        else:
-            st.info("⚖️ Hiring is near its peak growth phase — this is where expansion happens fastest.")
-
-        # Subtle realism checks (not aggressive warnings)
-        if r > 0.8:
-            st.caption("Note: The growth rate is quite high — real-world hiring usually faces operational limits.")
-        elif r < 0.08:
-            st.caption("Note: Growth is gradual — scaling may take longer depending on hiring strategy.")
-
-        # Capacity interpretation (more natural)
-        if capacity_used > 85:
-            st.caption("The workforce is approaching its planned limit.")
-        elif capacity_used < 40:
-            st.caption("There is still significant room for expansion.")
-
-        # -------- GRAPH --------
-        fig, ax = plt.subplots(figsize=(8,4))
-
-        ax.plot(df["Time (Months)"], df["Employees"], linewidth=3)
-        ax.fill_between(df["Time (Months)"], df["Employees"], alpha=0.15)
-        ax.axhline(K, linestyle="--", linewidth=2, label="Max Workforce")
-
-        ax.set_title("Employee Growth Over Time")
-        ax.set_xlabel("Time (Months)")
-        ax.set_ylabel("Employees")
-
-        ax.grid(alpha=0.3)
-        ax.legend()
-
-        st.pyplot(fig)
-        plt.close(fig)
-
-        # -------- TABLE --------
-        with st.expander("📋 View Data Table"):
-            st.dataframe(df, use_container_width=True)
-
-        # -------- INTERACTIVE POINT --------
-        index = st.slider("Inspect Month", 0, len(df)-1, 0)
-
-        row = df.iloc[index]
-
-        st.markdown(
-            f"""
-            **📍 Month:** {row['Time (Months)']}  
-            **👥 Employees:** {row['Employees']}
-            """
-        )
-
-    else:
-        st.info("Enter values and click **Simulate** to view results.")
+# ── SIMPLE MODEL EXPLANATION (for easy understanding) ──
+with st.expander("💡 How the Logistic Growth Model Works"):
+    st.markdown("""
+    This model is widely used in business because it reflects **real-world hiring**:
+    
+    1. **Early stage** → Hiring is fast (lots of open roles, easy to scale)  
+    2. **Middle stage** → Growth reaches its maximum speed  
+    3. **Late stage** → Growth naturally slows as the company approaches its planned capacity (budget, office space, management bandwidth)
+    
+    The curve you see is called an **S-curve** — the most realistic way to forecast workforce expansion.
+    """)
