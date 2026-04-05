@@ -69,16 +69,36 @@ with col2:
         m2.metric("End", final_emp)
         m3.metric("Capacity Used", f"{capacity_used:.1f}%")
 
-        # -------- SMART INSIGHTS --------
-        if capacity_used > 90:
-            st.warning("⚠️ Workforce is nearing maximum capacity. Growth will slow down significantly.")
-        elif capacity_used < 50:
-            st.info("ℹ️ Workforce is still in early growth stage. Plenty of hiring potential left.")
-        
-        if r > 0.7:
-            st.warning("⚠️ Growth rate is very high. This may be unrealistic in real scenarios.")
-        elif r < 0.1:
-            st.info("ℹ️ Growth rate is slow. Hiring will take longer to scale.")
+        # -------- SMART INSIGHTS (IMPROVED) --------
+
+        mid_index = len(df) // 2
+
+        start_val = df["Employees"].iloc[0]
+        mid_val = df["Employees"].iloc[mid_index]
+        end_val = df["Employees"].iloc[-1]
+
+        early_growth = mid_val - start_val
+        late_growth = end_val - mid_val
+
+        # Detect phase of growth
+        if early_growth > late_growth * 1.5:
+            st.info("📈 Hiring is still accelerating. Most of the growth is ahead.")
+        elif late_growth > early_growth * 1.5:
+            st.info("📉 Hiring momentum is slowing down as capacity limits start to take effect.")
+        else:
+            st.info("⚖️ Hiring is near its peak growth phase — this is where expansion happens fastest.")
+
+        # Subtle realism checks (not aggressive warnings)
+        if r > 0.8:
+            st.caption("Note: The growth rate is quite high — real-world hiring usually faces operational limits.")
+        elif r < 0.08:
+            st.caption("Note: Growth is gradual — scaling may take longer depending on hiring strategy.")
+
+        # Capacity interpretation (more natural)
+        if capacity_used > 85:
+            st.caption("The workforce is approaching its planned limit.")
+        elif capacity_used < 40:
+            st.caption("There is still significant room for expansion.")
 
         # -------- GRAPH --------
         fig, ax = plt.subplots(figsize=(8,4))
