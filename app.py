@@ -80,14 +80,47 @@ with col2:
         with gcol:
             selected_col = st.radio("Select Data", df.columns.tolist(), horizontal=True)
 
-            fig, ax = plt.subplots(figsize=(5,3))
-            ax.plot(df["Time (Months)"], df[selected_col], color="#C77DFF", linewidth=2)
-            ax.grid(True, linestyle='--', alpha=0.6)
+            fig, ax = plt.subplots(figsize=(7,4))  # bigger figure
 
+            # -------- MAIN LINE --------
+            ax.plot(
+                df["Time (Months)"], 
+                df[selected_col],
+                linewidth=3,
+                marker='o',
+                markersize=4
+            )
+
+            # -------- AREA FILL (important visual improvement) --------
+            if selected_col == "Employees":
+                ax.fill_between(
+                    df["Time (Months)"], 
+                    df["Employees"], 
+                    alpha=0.2
+                )
+
+            # -------- GRID --------
+            ax.grid(True, linestyle='--', linewidth=0.5, alpha=0.5)
+
+            # -------- LABELS --------
+            ax.set_xlabel("Time (Months)", fontsize=10)
+            ax.set_ylabel(selected_col, fontsize=10)
+
+            # -------- TITLE --------
+            ax.set_title(f"{selected_col} Growth Over Time", fontsize=13, weight='bold')
+
+            # -------- DARK THEME FIX --------
             ax.set_facecolor('#25274D')
             fig.patch.set_facecolor('#25274D')
+
             ax.tick_params(colors='white')
-            ax.set_title(selected_col, color='white')
+            ax.xaxis.label.set_color('white')
+            ax.yaxis.label.set_color('white')
+            ax.title.set_color('white')
+
+            # -------- SPINES (clean look) --------
+            for spine in ax.spines.values():
+                spine.set_color("#6C63FF")
 
             st.pyplot(fig, use_container_width=True)
             plt.close(fig)  # ✅ IMPORTANT FIX
