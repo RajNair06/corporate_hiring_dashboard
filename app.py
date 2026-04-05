@@ -14,6 +14,10 @@ st.set_page_config(page_title="Hiring Dashboard", layout="wide")
 
 st.title("📊 Hiring Dashboard")
 
+# -------- SESSION STATE FIX --------
+if "run_simulation" not in st.session_state:
+    st.session_state.run_simulation = False
+
 # -------- INPUTS --------
 col1, col2 = st.columns([1, 2])
 
@@ -25,20 +29,19 @@ with col1:
     r = st.number_input("Growth Rate", min_value=0.01, value=0.3)
     time_period = st.number_input("Time (Months)", min_value=1, value=24)
 
-    simulate = st.button("Simulate")
+    if st.button("Simulate"):
+        st.session_state.run_simulation = True
 
 # -------- OUTPUT --------
 with col2:
     st.subheader("Analysis")
 
-    if simulate:
+    if st.session_state.run_simulation:
 
-        # Validation
         if K <= P0:
             st.error("Max Workforce must be greater than Initial Employees")
             st.stop()
 
-        # Compute
         t = np.linspace(0, time_period, 100)
         employees = logistic_growth(t, P0, K, r)
 
@@ -58,13 +61,11 @@ with col2:
 
         ax.plot(df["Time (Months)"], df["Employees"], linewidth=3)
         ax.fill_between(df["Time (Months)"], df["Employees"], alpha=0.15)
-
         ax.axhline(K, linestyle="--", linewidth=2, label="Max Workforce")
 
         ax.set_title("Employee Growth")
         ax.set_xlabel("Time (Months)")
         ax.set_ylabel("Employees")
-
         ax.grid(alpha=0.3)
         ax.legend()
 
@@ -74,7 +75,7 @@ with col2:
         # -------- TABLE --------
         st.dataframe(df, use_container_width=True)
 
-        # -------- SIMPLE INTERACTION --------
+        # -------- FIXED SLIDER (NO DISAPPEAR ISSUE) --------
         index = st.slider("Select Month Index", 0, len(df)-1, 0)
 
         row = df.iloc[index]
